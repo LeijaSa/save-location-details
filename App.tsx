@@ -4,13 +4,48 @@ import { Appbar, FAB, Text, Button } from "react-native-paper";
 import { Camera, CameraCapturedPicture, PermissionResponse } from "expo-camera";
 import { useRef, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as SQLite from "expo-sqlite";
 
+interface Location {
+  id: number;
+  latitude: number;
+  longitude: number;
+  date: string;
+  tagtext: string;
+  infotext: string;
+}
+interface Picture {
+  id: number;
+  location_reference: number;
+  pictureUri: string;
+}
 interface cameraInfo {
   camMode: boolean;
   error: string;
   pic?: CameraCapturedPicture;
   info: string;
 }
+
+const db = SQLite.openDatabase("locationlist.db");
+
+db.transaction(
+  (tx: SQLite.SQLTransaction) => {
+    tx.executeSql(`CREATE TABLE IF NOT EXISTS locations (
+            id  INTEGER PRIMARY KEY AUTOINCREMENT,
+            latitude INTEGER NOT NULL,
+            longitude INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            tagtext TEXT,
+            infotext TEXT)`);
+    tx.executeSql(`CREATE TABLE IF NOT EXISTS pictures (
+              id  INTEGER PRIMARY KEY AUTOINCREMENT,
+              location_reference INTEGER NOT NULL,
+              pictureUri TEXT)`);
+  },
+  (err: SQLite.SQLError) => {
+    console.log(err);
+  }
+);
 
 const App: React.FC = (): React.ReactElement => {
   const cameraRef: any = useRef<Camera>();
@@ -77,7 +112,7 @@ const App: React.FC = (): React.ReactElement => {
     <>
       <SafeAreaProvider>
         <Appbar.Header>
-          <Appbar.Content title="Demo 6: Kamera" />
+          <Appbar.Content title="Describe and save location details" />
           <Appbar.Action icon="camera" onPress={startCamera} />
         </Appbar.Header>
       </SafeAreaProvider>
