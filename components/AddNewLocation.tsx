@@ -4,14 +4,6 @@ import * as SQLite from "expo-sqlite";
 import * as Location from "expo-location";
 import Dialog from "react-native-dialog";
 
-interface Location {
-  id: number;
-  latitude: number;
-  longitude: number;
-  date: string;
-  tagtext: string;
-  infotext: string;
-}
 interface Props {
   visible: boolean;
   closeAddDialog: () => void;
@@ -38,8 +30,8 @@ const App: React.FC<Props> = (props: Props): React.ReactElement => {
   const [latitude, setLatitude] = useState<number>(0);
   const [longitude, setLongitude] = useState<number>(0);
   const [date, setDate] = useState<string>("");
-  const tagtext: React.MutableRefObject<any> = useRef<TextInput>();
-  const infotext: React.MutableRefObject<any> = useRef<TextInput>();
+  const [tagText, setTagText] = useState<string>("");
+  const [infoText, setInfoText] = useState<string>("");
 
   const searchCurrentLocation = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -72,9 +64,10 @@ const App: React.FC<Props> = (props: Props): React.ReactElement => {
       (tx: SQLite.SQLTransaction) => {
         tx.executeSql(
           `INSERT INTO locations (tagtext, infotext, latitude, longitude, date) VALUES (?,?,?,?,?)`,
-          [String(tagtext), String(infotext), latitude, longitude, date],
+          [String(tagText), String(infoText), latitude, longitude, date],
           (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
             props.searchLocations();
+            props.closeAddDialog();
           }
         );
       },
@@ -91,18 +84,18 @@ const App: React.FC<Props> = (props: Props): React.ReactElement => {
     <View style={styles.container}>
       <Dialog.Container visible={props.visible}>
         <Dialog.Title>Add new location</Dialog.Title>
+
         <TextInput
-          ref={tagtext}
-          style={styles.textfield}
+          onChangeText={(text) => setTagText(text)}
           placeholder="Add tagtext"
-          onChangeText={(text: string) => (tagtext.current.value = text)}
+          style={styles.textfield}
         />
         <TextInput
-          ref={infotext}
-          style={styles.textfield}
+          onChangeText={(text) => setInfoText(text)}
           placeholder="Add infotext"
-          onChangeText={(text: string) => (infotext.current.value = text)}
+          style={styles.textfield}
         />
+
         <Dialog.Button label="Save" onPress={addNewLocation} />
         <Dialog.Button label="Cancel" onPress={props.closeAddDialog} />
       </Dialog.Container>

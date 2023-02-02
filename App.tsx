@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
-import { Image, StyleSheet, View, TextInput } from "react-native";
-import { Appbar, FAB, Text, Button } from "react-native-paper";
+import { Image, StyleSheet, View, TextInput, ScrollView } from "react-native";
+import { Appbar, FAB, Text, Button, List } from "react-native-paper";
 import { Camera, CameraCapturedPicture, PermissionResponse } from "expo-camera";
 import { useRef, useState, useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -46,14 +46,9 @@ db.transaction(
 const App: React.FC = (): React.ReactElement => {
   const cameraRef: any = useRef<Camera>();
 
-  const [latitude, setLatitude] = useState<number>(0);
-  const [longitude, setLongitude] = useState<number>(0);
-  const [date, setDate] = useState<string>("");
   const [locations, setLocations] = useState<Location[]>([]);
   const [pictures, setPictures] = useState<Picture[]>([]);
   const [locationId, setLocationId] = useState<number>(0);
-  const tagtext: React.MutableRefObject<any> = useRef<TextInput>();
-  const infotext: React.MutableRefObject<any> = useRef<TextInput>();
   const [visible, setVisible] = useState(false);
 
   const [picDescInfo, setPicDescInfo] = useState<cameraInfo>({
@@ -61,32 +56,6 @@ const App: React.FC = (): React.ReactElement => {
     error: "",
     info: "",
   });
-
-  const searchCurrentLocation = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      return;
-    }
-    let location = await Location.getCurrentPositionAsync({});
-    if (location.coords.latitude === null) {
-      searchCurrentLocation();
-    }
-    setLatitude(location.coords.latitude);
-    setLongitude(location.coords.longitude);
-    let extraDay = new Date(location.timestamp);
-    let day =
-      "Day: " +
-      extraDay.getDate() +
-      "/" +
-      (extraDay.getMonth() + 1) +
-      "/" +
-      extraDay.getFullYear() +
-      " Time: " +
-      extraDay.getHours() +
-      ":" +
-      extraDay.getMinutes();
-    setDate(String(day));
-  };
 
   const searchLocations = () => {
     db.transaction(
@@ -96,23 +65,6 @@ const App: React.FC = (): React.ReactElement => {
           [],
           (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
             setLocations(rs.rows._array);
-          }
-        );
-      },
-      (err: SQLite.SQLError) => {
-        console.log(err);
-      }
-    );
-  };
-
-  const addNewLocation = async () => {
-    db.transaction(
-      (tx: SQLite.SQLTransaction) => {
-        tx.executeSql(
-          `INSERT INTO locations (tagtext, infotext, latitude, longitude, date) VALUES (?,?,?,?,?)`,
-          [String(tagtext), String(infotext), latitude, longitude, date],
-          (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
-            searchLocations();
           }
         );
       },
@@ -159,6 +111,9 @@ const App: React.FC = (): React.ReactElement => {
   const closeAddDialog = async () => {
     setVisible(false);
   };
+  useEffect(() => {
+    searchLocations();
+  }, []);
 
   return picDescInfo.camMode ? (
     <Camera style={styles.cameraMode} ref={cameraRef}>
@@ -200,18 +155,24 @@ const App: React.FC = (): React.ReactElement => {
                 openAddDialog();
               }}
             />
-            <AddNewLocation visible={visible} closeAddDialog={closeAddDialog} />
+            <AddNewLocation
+              visible={visible}
+              closeAddDialog={closeAddDialog}
+              searchLocations={searchLocations}
+            />
+            <ScrollView>
+              {locations.length > 0 ? (
+                locations.map((location) => {
+                  return (
+                    <List.Item key={location.id} title={location.tagtext} />
+                  );
+                })
+              ) : (
+                <Text>There are not any saved location details</Text>
+              )}
+            </ScrollView>
           </>
         )}
-
-        {Boolean(picDescInfo.pic) ? (
-          <Image
-            style={styles.picture}
-            source={{ uri: picDescInfo.pic!.uri }}
-          />
-        ) : null}
-
-        <StatusBar style="auto" />
       </View>
     </>
   );
