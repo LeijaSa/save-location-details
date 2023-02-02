@@ -10,6 +10,7 @@ interface Props {
   locationTagText: string;
   closeDeleteDialog: () => void;
   searchLocations: () => void;
+  fetchPhotos: () => void;
 }
 
 const db = SQLite.openDatabase("locationlist.db");
@@ -17,17 +18,24 @@ const db = SQLite.openDatabase("locationlist.db");
 const App: React.FC<Props> = (props: Props): React.ReactElement => {
   const deleteLocation = async () => {
     db.transaction(
-      (tx) => {
+      (tx: SQLite.SQLTransaction) => {
         tx.executeSql(
           `DELETE from locations WHERE id IN (?)`,
           [props.locationId],
-          (_tx, rs) => {
+          (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
             props.searchLocations();
+          }
+        );
+        tx.executeSql(
+          `DELETE from photos WHERE location_reference IN (?)`,
+          [props.locationId],
+          (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
+            props.fetchPhotos();
             props.closeDeleteDialog();
           }
         );
       },
-      (err) => {
+      (err: SQLite.SQLError) => {
         console.log(err);
       }
     );

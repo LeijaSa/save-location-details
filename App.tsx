@@ -27,10 +27,10 @@ interface Location {
   tagtext: string;
   infotext: string;
 }
-interface Picture {
+interface Photo {
   id: number;
   location_reference: number;
-  pictureUri: string;
+  photoUri?: CameraCapturedPicture;
 }
 interface cameraInfo {
   camMode: boolean;
@@ -50,10 +50,10 @@ db.transaction(
       date TEXT NOT NULL,
       tagtext TEXT,
       infotext TEXT)`);
-    tx.executeSql(`CREATE TABLE IF NOT EXISTS pictures (
+    tx.executeSql(`CREATE TABLE IF NOT EXISTS photos (
               id  INTEGER PRIMARY KEY AUTOINCREMENT,
               location_reference INTEGER NOT NULL,
-              pictureUri TEXT)`);
+              photoUri TEXT)`);
   },
   (err: SQLite.SQLError) => {
     console.log(err);
@@ -64,8 +64,10 @@ const App: React.FC = (): React.ReactElement => {
   const cameraRef: any = useRef<Camera>();
 
   const [locations, setLocations] = useState<Location[]>([]);
-  const [pictures, setPictures] = useState<Picture[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [locationId, setLocationId] = useState<number>(0);
+  const [photoId, setPhotoId] = useState<number>(0);
+  const [checkId, setCheckId] = useState<number>(0);
   const [visible, setVisible] = useState(false);
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [checkPhotosVisible, setCheckPhotosVisible] = useState(false);
@@ -105,7 +107,7 @@ const App: React.FC = (): React.ReactElement => {
         ? "No persmission to use the camera."
         : "",
     });
-    setLocationId(id);
+    setPhotoId(id);
   };
 
   const takePic = async (): Promise<void> => {
@@ -123,6 +125,34 @@ const App: React.FC = (): React.ReactElement => {
       pic: extraPic,
       info: "",
     });
+
+    db.transaction(
+      (tx: SQLite.SQLTransaction) => {
+        tx.executeSql(
+          `INSERT INTO photos (location_reference, photoUri) VALUES (?,?)`,
+          [photoId, extraPic.uri],
+          (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
+            fetchPhotos();
+          }
+        );
+      },
+      (err: SQLite.SQLError) => {
+        console.log(err);
+      }
+    );
+  };
+
+  const fetchPhotos = () => {
+    db.transaction(
+      (tx) => {
+        tx.executeSql(`SELECT * FROM photos`, [], (_tx, rs) => {
+          setPhotos(rs.rows._array);
+        });
+      },
+      (err) => {
+        console.log(err);
+      }
+    );
   };
 
   const openAddDialog = async () => {
@@ -139,7 +169,8 @@ const App: React.FC = (): React.ReactElement => {
   const closeDeleteDialog = async () => {
     setDeleteVisible(false);
   };
-  const openCheckPhotosDialog = async () => {
+  const openCheckPhotosDialog = async (id: number) => {
+    setCheckId(id);
     setCheckPhotosVisible(true);
   };
   const closeCheckPhotosDialog = async () => {
@@ -147,6 +178,7 @@ const App: React.FC = (): React.ReactElement => {
   };
   useEffect(() => {
     searchLocations();
+    fetchPhotos();
   }, []);
 
   return picDescInfo.camMode ? (
@@ -188,7 +220,7 @@ const App: React.FC = (): React.ReactElement => {
                         mode="outlined"
                         labelStyle={{ color: "#000000", fontSize: 17 }}
                         onPress={() => {
-                          openCheckPhotosDialog();
+                          openCheckPhotosDialog(location.id);
                         }}
                       >
                         {location.tagtext}
@@ -231,7 +263,7 @@ const App: React.FC = (): React.ReactElement => {
               })}
             </>
           ) : (
-            <Text>There are not any saved location details</Text>
+            <Text>There aren't any saved location details</Text>
           )}
           <StatusBar style="auto" />
         </ScrollView>
@@ -252,14 +284,16 @@ const App: React.FC = (): React.ReactElement => {
           deleteVisible={deleteVisible}
           closeDeleteDialog={closeDeleteDialog}
           searchLocations={searchLocations}
+          fetchPhotos={fetchPhotos}
           locationId={locationId}
           locationTagText={locationTagText}
         />
         <CheckPhotos
           checkPhotosVisible={checkPhotosVisible}
           closeCheckPhotosDialog={closeCheckPhotosDialog}
-          locationId={locationId}
+          checkId={checkId}
           locationTagText={locationTagText}
+          photos={photos}
         />
       </Provider>
     </>
