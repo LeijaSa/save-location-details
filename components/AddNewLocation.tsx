@@ -64,7 +64,7 @@ const App: React.FC<Props> = (props: Props): React.ReactElement => {
       (tx: SQLite.SQLTransaction) => {
         tx.executeSql(
           `INSERT INTO locations (tagtext, infotext, latitude, longitude, date) VALUES (?,?,?,?,?)`,
-          [String(tagText), String(infoText), latitude, longitude, date],
+          [tagText, infoText, latitude, longitude, date],
           (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
             props.searchLocations();
             props.closeAddDialog();

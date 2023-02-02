@@ -1,6 +1,14 @@
 import { StatusBar } from "expo-status-bar";
 import { Image, StyleSheet, View, TextInput, ScrollView } from "react-native";
-import { Appbar, FAB, Text, Button, List } from "react-native-paper";
+import {
+  Appbar,
+  FAB,
+  Text,
+  Button,
+  List,
+  Provider,
+  IconButton,
+} from "react-native-paper";
 import { Camera, CameraCapturedPicture, PermissionResponse } from "expo-camera";
 import { useRef, useState, useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -8,6 +16,7 @@ import * as SQLite from "expo-sqlite";
 import * as Location from "expo-location";
 import Dialog from "react-native-dialog";
 import AddNewLocation from "./components/AddNewLocation";
+import DeleteLocation from "./components/DeleteLocation";
 
 interface Location {
   id: number;
@@ -33,6 +42,13 @@ const db = SQLite.openDatabase("locationlist.db");
 
 db.transaction(
   (tx: SQLite.SQLTransaction) => {
+    tx.executeSql(`CREATE TABLE IF NOT EXISTS locations (
+      id  INTEGER PRIMARY KEY AUTOINCREMENT,
+      latitude INTEGER NOT NULL,
+      longitude INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      tagtext TEXT,
+      infotext TEXT)`);
     tx.executeSql(`CREATE TABLE IF NOT EXISTS pictures (
               id  INTEGER PRIMARY KEY AUTOINCREMENT,
               location_reference INTEGER NOT NULL,
@@ -50,6 +66,8 @@ const App: React.FC = (): React.ReactElement => {
   const [pictures, setPictures] = useState<Picture[]>([]);
   const [locationId, setLocationId] = useState<number>(0);
   const [visible, setVisible] = useState(false);
+  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [locationTagText, setLocationTagText] = useState<string>("");
 
   const [picDescInfo, setPicDescInfo] = useState<cameraInfo>({
     camMode: false,
@@ -111,6 +129,14 @@ const App: React.FC = (): React.ReactElement => {
   const closeAddDialog = async () => {
     setVisible(false);
   };
+  const openDeleteDialog = async (id: number, text: string) => {
+    setLocationId(id);
+    setLocationTagText(text);
+    setDeleteVisible(true);
+  };
+  const closeDeleteDialog = async () => {
+    setDeleteVisible(false);
+  };
   useEffect(() => {
     searchLocations();
   }, []);
@@ -137,43 +163,71 @@ const App: React.FC = (): React.ReactElement => {
     </Camera>
   ) : (
     <>
-      <SafeAreaProvider>
+      <Provider>
         <Appbar.Header>
           <Appbar.Content title="Save location details" />
         </Appbar.Header>
-      </SafeAreaProvider>
-      <View style={styles.container}>
-        {Boolean(picDescInfo.error) ? (
-          <Text>{picDescInfo.error}</Text>
-        ) : (
-          <>
-            <FAB
-              style={styles.fab}
-              icon="map-marker"
-              label="Add new Location"
-              onPress={() => {
-                openAddDialog();
-              }}
-            />
-            <AddNewLocation
-              visible={visible}
-              closeAddDialog={closeAddDialog}
-              searchLocations={searchLocations}
-            />
-            <ScrollView>
-              {locations.length > 0 ? (
-                locations.map((location) => {
-                  return (
-                    <List.Item key={location.id} title={location.tagtext} />
-                  );
-                })
-              ) : (
-                <Text>There are not any saved location details</Text>
-              )}
-            </ScrollView>
-          </>
-        )}
-      </View>
+
+        <ScrollView style={{ padding: 20 }}>
+          {locations.length > 0 ? (
+            <>
+              {locations.map((location: Location, idx: number) => {
+                return (
+                  <List.Item
+                    title={location.tagtext}
+                    key={idx}
+                    descriptionNumberOfLines={7}
+                    description={
+                      "Info: " +
+                      location.infotext +
+                      "\n" +
+                      "lat: " +
+                      location.latitude +
+                      "\n" +
+                      "lon: " +
+                      location.longitude +
+                      "\n" +
+                      location.date
+                    }
+                    right={(props) => (
+                      <IconButton
+                        {...props}
+                        icon="trash-can"
+                        onPress={() => {
+                          openDeleteDialog(location.id, location.tagtext);
+                        }}
+                      />
+                    )}
+                  />
+                );
+              })}
+            </>
+          ) : (
+            <Text>There are not any saved location details</Text>
+          )}
+          <StatusBar style="auto" />
+        </ScrollView>
+        <FAB
+          style={styles.fab}
+          icon="map-marker"
+          label="Add new Location"
+          onPress={() => {
+            openAddDialog();
+          }}
+        />
+        <AddNewLocation
+          visible={visible}
+          closeAddDialog={closeAddDialog}
+          searchLocations={searchLocations}
+        />
+        <DeleteLocation
+          deleteVisible={deleteVisible}
+          closeDeleteDialog={closeDeleteDialog}
+          searchLocations={searchLocations}
+          locationId={locationId}
+          locationTagText={locationTagText}
+        />
+      </Provider>
     </>
   );
 };
