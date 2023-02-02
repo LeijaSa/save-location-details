@@ -17,6 +17,7 @@ import * as Location from "expo-location";
 import Dialog from "react-native-dialog";
 import AddNewLocation from "./components/AddNewLocation";
 import DeleteLocation from "./components/DeleteLocation";
+import CheckPhotos from "./components/CheckPhotos";
 
 interface Location {
   id: number;
@@ -67,6 +68,7 @@ const App: React.FC = (): React.ReactElement => {
   const [locationId, setLocationId] = useState<number>(0);
   const [visible, setVisible] = useState(false);
   const [deleteVisible, setDeleteVisible] = useState(false);
+  const [checkPhotosVisible, setCheckPhotosVisible] = useState(false);
   const [locationTagText, setLocationTagText] = useState<string>("");
 
   const [picDescInfo, setPicDescInfo] = useState<cameraInfo>({
@@ -137,6 +139,12 @@ const App: React.FC = (): React.ReactElement => {
   const closeDeleteDialog = async () => {
     setDeleteVisible(false);
   };
+  const openCheckPhotosDialog = async () => {
+    setCheckPhotosVisible(true);
+  };
+  const closeCheckPhotosDialog = async () => {
+    setCheckPhotosVisible(false);
+  };
   useEffect(() => {
     searchLocations();
   }, []);
@@ -174,7 +182,18 @@ const App: React.FC = (): React.ReactElement => {
               {locations.map((location: Location, idx: number) => {
                 return (
                   <List.Item
-                    title={location.tagtext}
+                    title={
+                      <Button
+                        style={styles.buttonO}
+                        mode="outlined"
+                        labelStyle={{ color: "#000000", fontSize: 17 }}
+                        onPress={() => {
+                          openCheckPhotosDialog();
+                        }}
+                      >
+                        {location.tagtext}
+                      </Button>
+                    }
                     key={idx}
                     descriptionNumberOfLines={7}
                     description={
@@ -195,6 +214,15 @@ const App: React.FC = (): React.ReactElement => {
                         icon="trash-can"
                         onPress={() => {
                           openDeleteDialog(location.id, location.tagtext);
+                        }}
+                      />
+                    )}
+                    left={(props) => (
+                      <IconButton
+                        {...props}
+                        icon="camera"
+                        onPress={() => {
+                          startCamera(location.id);
                         }}
                       />
                     )}
@@ -227,6 +255,12 @@ const App: React.FC = (): React.ReactElement => {
           locationId={locationId}
           locationTagText={locationTagText}
         />
+        <CheckPhotos
+          checkPhotosVisible={checkPhotosVisible}
+          closeCheckPhotosDialog={closeCheckPhotosDialog}
+          locationId={locationId}
+          locationTagText={locationTagText}
+        />
       </Provider>
     </>
   );
@@ -249,6 +283,11 @@ const styles = StyleSheet.create({
     margin: 20,
     bottom: 0,
     right: 0,
+  },
+  buttonO: {
+    backgroundColor: "#D7B1E5",
+    borderRadius: 10,
+    margin: 8,
   },
   butTakePic: {
     position: "absolute",
