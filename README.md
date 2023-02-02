@@ -8,6 +8,6 @@ This is a study assignment made using TS/ React Native / React Native Paper.
 
 ## Setup
 
-To run this project npx expo start
+To run this project: npx expo start.
 
-install expo go to your mobile.
+Install also expo go to your mobile.
