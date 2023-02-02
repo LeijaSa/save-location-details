@@ -1,5 +1,6 @@
 import { StyleSheet, View, TextInput, ScrollView, Image } from "react-native";
 import { List, Provider, Text } from "react-native-paper";
+
 import { useRef, useState, useEffect } from "react";
 import * as SQLite from "expo-sqlite";
 import * as Location from "expo-location";
@@ -30,17 +31,19 @@ const App: React.FC<Props> = (props: Props): React.ReactElement => {
           <ScrollView style={{ padding: 20 }}>
             {props.photos.length > 0 ? (
               <>
-                {props.photos.map((photo: Photo, idx: number) => {
-                  if (photo.location_reference === props.checkId) {
-                    return (
-                      <Image
-                        style={styles.picture}
-                        source={{ uri: String(photo.photoUri) }}
-                        key={idx}
-                      />
-                    );
-                  }
-                })}
+                <View style={styles.row}>
+                  {props.photos.map((photo: Photo, idx: number) => {
+                    if (photo.location_reference === props.checkId) {
+                      return (
+                        <Image
+                          style={styles.picture}
+                          source={{ uri: String(photo.photoUri) }}
+                          key={idx}
+                        />
+                      );
+                    }
+                  })}
+                </View>
               </>
             ) : (
               <Text>There aren't any saved photos from the location</Text>
@@ -79,10 +82,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
   },
+  row: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
   picture: {
     width: 100,
     height: 200,
-    resizeMode: "stretch",
+    margin: 7,
   },
   textfield: {
     margin: 20,
