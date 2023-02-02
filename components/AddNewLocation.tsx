@@ -7,7 +7,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SQLite from "expo-sqlite";
 import * as Location from "expo-location";
 import Dialog from "react-native-dialog";
-import AddNewLocation from "./components/AddNewLocation";
 
 interface Location {
   id: number;
@@ -17,50 +16,35 @@ interface Location {
   tagtext: string;
   infotext: string;
 }
-interface Picture {
-  id: number;
-  location_reference: number;
-  pictureUri: string;
+interface Props {
+  visible: boolean;
+  closeAddDialog: () => void;
 }
-interface cameraInfo {
-  camMode: boolean;
-  error: string;
-  pic?: CameraCapturedPicture;
-  info: string;
-}
-
 const db = SQLite.openDatabase("locationlist.db");
 
 db.transaction(
   (tx: SQLite.SQLTransaction) => {
-    tx.executeSql(`CREATE TABLE IF NOT EXISTS pictures (
+    tx.executeSql(`CREATE TABLE IF NOT EXISTS locations (
               id  INTEGER PRIMARY KEY AUTOINCREMENT,
-              location_reference INTEGER NOT NULL,
-              pictureUri TEXT)`);
+              latitude INTEGER NOT NULL,
+              longitude INTEGER NOT NULL,
+              date TEXT NOT NULL,
+              tagtext TEXT,
+              infotext TEXT)`);
   },
   (err: SQLite.SQLError) => {
     console.log(err);
   }
 );
 
-const App: React.FC = (): React.ReactElement => {
-  const cameraRef: any = useRef<Camera>();
-
+const App: React.FC<Props> = (props: Props): React.ReactElement => {
   const [latitude, setLatitude] = useState<number>(0);
   const [longitude, setLongitude] = useState<number>(0);
   const [date, setDate] = useState<string>("");
   const [locations, setLocations] = useState<Location[]>([]);
-  const [pictures, setPictures] = useState<Picture[]>([]);
   const [locationId, setLocationId] = useState<number>(0);
   const tagtext: React.MutableRefObject<any> = useRef<TextInput>();
   const infotext: React.MutableRefObject<any> = useRef<TextInput>();
-  const [visible, setVisible] = useState(false);
-
-  const [picDescInfo, setPicDescInfo] = useState<cameraInfo>({
-    camMode: false,
-    error: "",
-    info: "",
-  });
 
   const searchCurrentLocation = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -121,99 +105,30 @@ const App: React.FC = (): React.ReactElement => {
       }
     );
   };
+  useEffect(() => {
+    searchCurrentLocation();
+  }, []);
 
-  const startCamera = async (id: number): Promise<void> => {
-    const cameraPermission: PermissionResponse =
-      await Camera.requestCameraPermissionsAsync();
-
-    setPicDescInfo({
-      ...picDescInfo,
-      camMode: cameraPermission.granted,
-      error: !cameraPermission.granted
-        ? "No persmission to use the camera."
-        : "",
-    });
-    setLocationId(id);
-  };
-
-  const takePic = async (): Promise<void> => {
-    setPicDescInfo({
-      ...picDescInfo,
-      info: "Wait a moment...",
-    });
-
-    const extraPic: CameraCapturedPicture =
-      await cameraRef.current.takePictureAsync();
-
-    setPicDescInfo({
-      ...picDescInfo,
-      camMode: false,
-      pic: extraPic,
-      info: "",
-    });
-  };
-
-  const openAddDialog = async () => {
-    setVisible(true);
-  };
-  const closeAddDialog = async () => {
-    setVisible(false);
-  };
-
-  return picDescInfo.camMode ? (
-    <Camera style={styles.cameraMode} ref={cameraRef}>
-      {Boolean(picDescInfo.info) ? (
-        <Text style={{ color: "#fff" }}>{picDescInfo.info}</Text>
-      ) : null}
-
-      <FAB
-        style={styles.butTakePic}
-        icon="camera"
-        label="Take a picture"
-        onPress={takePic}
-      />
-
-      <FAB
-        style={styles.butClose}
-        icon="close"
-        label="Close"
-        onPress={() => setPicDescInfo({ ...picDescInfo, camMode: false })}
-      />
-    </Camera>
-  ) : (
-    <>
-      <SafeAreaProvider>
-        <Appbar.Header>
-          <Appbar.Content title="Save location details" />
-        </Appbar.Header>
-      </SafeAreaProvider>
-      <View style={styles.container}>
-        {Boolean(picDescInfo.error) ? (
-          <Text>{picDescInfo.error}</Text>
-        ) : (
-          <>
-            <FAB
-              style={styles.fab}
-              icon="map-marker"
-              label="Add new Location"
-              onPress={() => {
-                openAddDialog();
-              }}
-            />
-            <AddNewLocation visible={visible} closeAddDialog={closeAddDialog} />
-          </>
-        )}
-
-        {Boolean(picDescInfo.pic) ? (
-          <Image
-            style={styles.picture}
-            source={{ uri: picDescInfo.pic!.uri }}
-          />
-        ) : null}
-
-        <StatusBar style="auto" />
-      </View>
-    </>
+  return (
+    <View style={styles.container}>
+      <Dialog.Container visible={props.visible}>
+        <Dialog.Title>Add new location</Dialog.Title>
+        <TextInput
+          ref={tagtext}
+          style={styles.textfield}
+          placeholder="Add tagtext"
+          onChangeText={(text: string) => (tagtext.current.value = text)}
+        />
+        <TextInput
+          ref={infotext}
+          style={styles.textfield}
+          placeholder="Add infotext"
+          onChangeText={(text: string) => (infotext.current.value = text)}
+        />
+        <Dialog.Button label="Save" onPress={addNewLocation} />
+        <Dialog.Button label="Cancel" onPress={props.closeAddDialog} />
+      </Dialog.Container>
+    </View>
   );
 };
 
@@ -246,8 +161,8 @@ const styles = StyleSheet.create({
     height: 400,
     resizeMode: "stretch",
   },
-  fab: {
-    margin: 10,
+  textfield: {
+    margin: 20,
   },
 });
 
