@@ -1,9 +1,5 @@
-import { StatusBar } from "expo-status-bar";
-import { Image, StyleSheet, View, TextInput } from "react-native";
-import { Appbar, FAB, Text, Button } from "react-native-paper";
-import { Camera, CameraCapturedPicture, PermissionResponse } from "expo-camera";
+import { StyleSheet, View, TextInput } from "react-native";
 import { useRef, useState, useEffect } from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SQLite from "expo-sqlite";
 import * as Location from "expo-location";
 import Dialog from "react-native-dialog";
@@ -19,6 +15,7 @@ interface Location {
 interface Props {
   visible: boolean;
   closeAddDialog: () => void;
+  searchLocations: () => void;
 }
 const db = SQLite.openDatabase("locationlist.db");
 
@@ -41,8 +38,6 @@ const App: React.FC<Props> = (props: Props): React.ReactElement => {
   const [latitude, setLatitude] = useState<number>(0);
   const [longitude, setLongitude] = useState<number>(0);
   const [date, setDate] = useState<string>("");
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [locationId, setLocationId] = useState<number>(0);
   const tagtext: React.MutableRefObject<any> = useRef<TextInput>();
   const infotext: React.MutableRefObject<any> = useRef<TextInput>();
 
@@ -72,23 +67,6 @@ const App: React.FC<Props> = (props: Props): React.ReactElement => {
     setDate(String(day));
   };
 
-  const searchLocations = () => {
-    db.transaction(
-      (tx: SQLite.SQLTransaction) => {
-        tx.executeSql(
-          `SELECT * FROM locations`,
-          [],
-          (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
-            setLocations(rs.rows._array);
-          }
-        );
-      },
-      (err: SQLite.SQLError) => {
-        console.log(err);
-      }
-    );
-  };
-
   const addNewLocation = async () => {
     db.transaction(
       (tx: SQLite.SQLTransaction) => {
@@ -96,7 +74,7 @@ const App: React.FC<Props> = (props: Props): React.ReactElement => {
           `INSERT INTO locations (tagtext, infotext, latitude, longitude, date) VALUES (?,?,?,?,?)`,
           [String(tagtext), String(infotext), latitude, longitude, date],
           (_tx: SQLite.SQLTransaction, rs: SQLite.SQLResultSet) => {
-            searchLocations();
+            props.searchLocations();
           }
         );
       },
